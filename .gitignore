@@ -30,5 +30,10 @@
 
 # Debug files
 *.dSYM/
+
+# Eclipse project files
 *.cproject
 *.project
+
+# Debug folder
+Debug/
