@@ -369,9 +369,7 @@ int main(void)
   /*Initializes Erika related stuffs*/
 	EE_system_init();
 
-	SWatch_state.errorStatus = errorSig;
-	SWatch_state.ModelData.prevZCSigState = &ZCSig;
-	SWatch_state.ModelData.dwork = &DWork;
+	SM * sm;
 
   /* init state machine */
 	SWatch_initialize(&SWatch_state,
