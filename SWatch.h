@@ -25,10 +25,9 @@ typedef enum Signal
 
 typedef enum State
 {
-	SRESET, SRUNNING, SPAUSE, SFREEZE,
+	TIME_MODE, SRESET, SRUNNING, SPAUSE, SFREEZE,
 	TSET_HOURS, TSET_MINUTES,
-	ASET_HOURS, ASET_MINUTES,
-	CHECK
+	ASET_HOURS, ASET_MINUTES
 }State;
 
 typedef struct Timer
@@ -81,10 +80,7 @@ void SWatchStep(SM* sm);
 void doNothing(SM * sm);
 void SWatchTimeMode(SM * sm);
 
-void entryTM(SM * sm);
-void entrySM(SM * sm);
-void entryTSM(SM * sm);
-void entryAM(SM * sm);
+
 void entrySRES(SM * sm);
 void entrySRUN(SM * sm);
 void entrySP(SM * sm);
@@ -95,10 +91,6 @@ void entryASH(SM * sm);
 void entryASM(SM * sm);
 void entryCH(SM * sm);
 
-void exitTM(SM * sm);
-void exitSM(SM * sm);
-void exitTSM(SM * sm);
-void exitAM(SM * sm);
 void exitSRES(SM * sm);
 void exitSRUN(SM * sm);
 void exitSP(SM * sm);
@@ -108,6 +100,14 @@ void exitTSMIM(SM * sm);
 void exitASH(SM * sm);
 void exitASM(SM * sm);
 void exitCH(SM * sm);
+
+void toSwatchMode(SM * sm);
+void toTimeSetMode(SM * sm);
+void toAlarmMode(SM * sm);
+void toTimeMode(SM * sm);
+void freeze(SM * sm);
+void TincMinutes(SM * sm);
+
 
 
 #endif /* SWATCH_H_ */

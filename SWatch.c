@@ -11,6 +11,7 @@
 
 state const Sarray[MAX_STATE] =
 {
+	{TIME_MODE, &entrytm, &exittm},
 	{SRESET, &entrySRES, &exitSRES},
 	{SRUNNING, &entrySRUN, &exitSRUN},
 	{SPAUSE, &entrySP, &exitSP},
@@ -20,16 +21,91 @@ state const Sarray[MAX_STATE] =
 	{ASET_HOURS, &entryASH, &exitASH},
 	{ASET_MINUTES &entryASM, &exitASM},
 	{CHECK, &entryCH, &exitCH}
-}
+};
 Tran const Ttable[MAX_STATE][MAX_SIGNAL] =
 {
 		{//TIME MODE
-				{}
+			{&toSwatchMode,		SRESET},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode,		ASET_HOURS},
+			{&doNothing, 		TIME_MODE},
+			{&doNothing,		TIME_MODE},
+			{&setAlarm, 		TIME_MODE}
 		},
-		{//SWATCH MODE
-				{}
-		}
+		{//STOPWATCH RESET
+			{&doNothing, 		SRESET},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode, 		ASET_HOURS},
+			{&toTimeMode, 		TIME_MODE},
+			{&doNothing, 		SRUNNING},
+			{&doNothing,		SRESET},
+			{&setAlarm, 		SRESET}
+		},
+		{//STOPWATCH RUNNING
+			{&freeze, 			SFREEZE},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode, 		ASET_HOURS},
+			{&toTimeMode, 		TIME_MODE},
+			{&doNothing, 		SPAUSE},
+			{&doNothing,		SRESET},
+			{&setAlarm, 		SRUNNING}
+		},
+		{//STOPWATCH PAUSE
+			{&doNothing,		SPAUSE},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode, 		ASET_HOURS},
+			{&toTimeMode, 		TIME_MODE},
+			{&doNothing, 		SRUNNING},
+			{&doNothing, 		SRESET},
+			{&setAlarm, 		SPAUSE}
+		},
+		{//STOPWATCH FREEZE
+			{&doNothing, 		SRUNNING},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode, 		ASET_HOURS},
+			{&toTimeMode, 		TIME_MODE},
+			{&doNothing, 		SFREEZE},
+			{doNothing, 		SFREEZE},
+			{&setAlarm, 		SFREEZE}
 
+		},
+		{//TIME SET HOURS
+			{&toSwatchMode, 	SRESET},
+			{&doNothing, 		TSET_MINUTES},
+			{&toAlarmMode, 		ASET_HOURS},
+			{&toTimeMode, 		TIME_MODE},
+			{&TincHours, 		TSET_HOURS},
+			{&TdecHours,		TSET_HOURS},
+			{&setAlarm, 		TSET_HOURS}
+		},
+		{//TIME SET MINUTES
+			{&toSwatchMode,		SRESET},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode, 		ASET_HOURS},
+			{&toTimeMode, 		TIME_MODE},
+			{&TincMinutes,		TSET_MINUTES},
+			{&TdecMinutes,		TSET_MINUTES},
+			{&setAlarm, 		TSET_MINUTES}
+
+		},
+		{//ALARM SET HOURS
+			{&toSwatchMode,		SRESET},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode, 		ASET_MINUTES},
+			{&toTimeMode, 		TIME_MODE},
+			{&AincHours,		ASET_HOURS},
+			{&AdecHours,		ASET_HOURS},
+			{&setAlarm, 		ASET_HOURS}
+		},
+		{//ALARM SET MINUTES
+			{{&toSwatchMode,	SRESET},
+			{&toTimeSetMode, 	TSET_HOURS},
+			{&toAlarmMode, 		ASET_HOURS},
+			{&toTimeMode, 		TIME_MODE},
+			{&AincMinutes,		ASET_MINUTES},
+			{&AdecMinutes,		ASET_MINUTES},
+			{&setAlarm, 		ASET_MINUTES}}
+		},
 };
 
 
@@ -75,7 +151,12 @@ void dispatch(SM * sm, uint8 const sig)
 
 void SWatchStep(SM * sm)
 {
-	if(sm->)
+	if(sm->Trunning) {tick(sm->clockTimer);}
+	if(sm->Srunning) {tick(sm->sWatchTimer);}
+	if((timerCompare(sm->alarmTimer, sm->clockTimer)) && sm->isAlarmSet)
+	{
+		sm->buzzer = true;
+	}
 }
 
 void doNothing(SM * sm){}
@@ -84,6 +165,20 @@ void doNothing(SM * sm){}
 //----------------------------------------------------------
 //TRANSITION FUNCTIONS
 //----------------------------------------------------------
+
+void toSwatchMode(SM * sm)	{sm->mode = 3; sm->outTimer = sm->sWatchTimer; }
+void toTimeSetMode(SM * sm) {sm->mode = 1; sm->Trunning = false; sm->submode = 1;}
+void toAlarmMode(SM * sm)	{sm->mode = 2; sm->outTimer = sm->alarmTimer; sm->submode = 1;}
+void setAlarm(SM * sm)		{sm->isAlarmSet = !sm->isAlarmSet; if(sm->buzzer) sm->buzzer = false;}
+void freeze(SM * sm)		{/*??*/}
+void toTimeMode(SM * sm)	{sm->mode = 0; sm->outTimer = sm->clockTimer;}
+void TincMinutes(SM * sm)	{sm->clockTimer->minutes = (sm->clockTimer->minutes + 1) % 60;}
+void TdecMinutes(SM * sm)
+{
+	sm->clockTimer->minutes = (sm->clockTimer->minutes - 1) % 60;
+	if(sm->clockTimer->minutes == 59){sm->clockTimer->minutes = 0;}
+}
+
 
 
 
@@ -111,15 +206,12 @@ void entryCH(SM * sm){doNothing(sm);}
 //------------------------------------------------------------
 
 void exitTM(SM * sm){doNothing(sm);}
-void exitSM(SM * sm){doNothing(sm);}
-void exitTSM(SM * sm){sm->Trunning = true;}
-void exitAM(SM * sm){doNothing(sm);}
 void exitSRES(SM * sm){doNothing(sm);}
 void exitSRUN(SM * sm){doNothing(sm);}
 void exitSP(SM * sm){doNothing(sm);}
 void exitSF(SM * sm){doNothing(sm);}
-void exitTSH(SM * sm){doNothing(sm);}
-void exitTSMIM(SM * sm){doNothing(sm);}
+void exitTSH(SM * sm){sm->Trunning = true;}
+void exitTSMIM(SM * sm){sm->Trunning = true;}
 void exitASH(SM * sm){doNothing(sm);}
 void exitASM(SM * sm){doNothing(sm);}
 void exitCH(SM * sm){doNothing(sm);}
@@ -132,6 +224,13 @@ void tick(Timer * t)
 
 	if(t->tenths == 10){t->tenths = 0; t->seconds++;}
 	if(t->seconds == 60){t->seconds = 0; t->minutes++;}
-	if(t->minutes == 60){t->minutes = 0; t->hours++}
+	if(t->minutes == 60){t->minutes = 0; t->hours++;}
 	if(t->hours == 24){t->hours = 0;}
+}
+
+boolean timerCompare(Timer * t1, Timer * t2)
+{
+	if(t1->hours != t2->hours || t1->minutes != t2->minutes)
+		return false;
+	return true;
 }
