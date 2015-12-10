@@ -9,6 +9,15 @@
 #define SWATCH_H_
 
 
+typedef void (*Action)(SM *sm);
+
+typedef struct state
+{
+	State s;
+	Action entry;
+	Action exit;
+}state;
+
 typedef enum Signal
 {
 	BSTOP, BTIMESET, BALARM, BTIME, BPLUS, BMINUS, BALARMSET, MAX_SIGNAL
@@ -16,12 +25,11 @@ typedef enum Signal
 
 typedef enum State
 {
-	TIME_MODE, SWATCH_MODE, TIMESET_MODE, ALARM_MODE,
 	SRESET, SRUNNING, SPAUSE, SFREEZE,
 	TSET_HOURS, TSET_MINUTES,
 	ASET_HOURS, ASET_MINUTES,
 	CHECK
-};
+}State;
 
 typedef struct Timer
 {
@@ -31,15 +39,24 @@ typedef struct Timer
 	uint8 tenths;
 }Timer;
 
+typedef struct Tran
+{
+	action Action;
+	state nextState;
+}tran;
+
 typedef struct SM
 {
-	State currentState;
-	Tran const *stateTable;
+	state const *stateArray;
+	Tran const *tranTable;
+	state currState;
 	uint8 numSignals;
 	uint8 numStates;
+	uint8 mode;
+	uint8 submode;
 
 	//status variables
-	uint8 Trunning, Srunning;
+	boolean Trunning, Srunning;
 	//timers
 	Timer clockTimer, alarmTimer, sWatchTimer;
 	//output timer
@@ -48,13 +65,8 @@ typedef struct SM
 	boolean isAlarmSet, buzzer;
 }SM;
 
-typedef void (*Action)(SM *sm);
 
-struct Tran
-{
-	action Action;
-	uint8 nextState;
-};
+
 
 
 //-------------------------------------------------------
@@ -64,9 +76,38 @@ struct Tran
 void TimerInit(Timer *t);
 
 void SWatchInit(SM * sm);
-void SWatchStep(SM* me);
+void SWatchStep(SM* sm);
 
+void doNothing(SM * sm);
+void SWatchTimeMode(SM * sm);
 
+void entryTM(SM * sm);
+void entrySM(SM * sm);
+void entryTSM(SM * sm);
+void entryAM(SM * sm);
+void entrySRES(SM * sm);
+void entrySRUN(SM * sm);
+void entrySP(SM * sm);
+void entrySF(SM * sm);
+void entryTSH(SM * sm);
+void entryTSMIN(SM * sm);
+void entryASH(SM * sm);
+void entryASM(SM * sm);
+void entryCH(SM * sm);
+
+void exitTM(SM * sm);
+void exitSM(SM * sm);
+void exitTSM(SM * sm);
+void exitAM(SM * sm);
+void exitSRES(SM * sm);
+void exitSRUN(SM * sm);
+void exitSP(SM * sm);
+void exitSF(SM * sm);
+void exitTSH(SM * sm);
+void exitTSMIM(SM * sm);
+void exitASH(SM * sm);
+void exitASM(SM * sm);
+void exitCH(SM * sm);
 
 
 #endif /* SWATCH_H_ */

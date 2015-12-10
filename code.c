@@ -215,7 +215,7 @@ TASK(TaskClock)
 	char astr[2];
 
 	if (IsEvent(TIMEMODE))
-		Btime=1;
+		Btime=1;//dispatch
 	else
 		Btime=0;
 
@@ -370,6 +370,7 @@ int main(void)
 	EE_system_init();
 
 	SM * sm;
+	SWatchInit(sm);
 
   /* init state machine */
 	SWatch_initialize(&SWatch_state,
