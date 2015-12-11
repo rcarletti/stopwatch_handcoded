@@ -9,12 +9,14 @@
 #define SWATCH_H_
 
 #include "ee.h"
-//------------------------------------------------------
-// SIGNALS AND STATES
-//------------------------------------------------------
+
 typedef struct SM SM;
 
 typedef void (*Action)(SM *sm);
+//------------------------------------------------------
+// SIGNALS AND STATES
+//------------------------------------------------------
+
 
 typedef enum State
 {
@@ -37,7 +39,7 @@ typedef enum Signal
 }Signal;
 
 //---------------------------------------------------------
-//
+// STATE MACHINE STRUCTURES
 //---------------------------------------------------------
 
 typedef struct Timer
@@ -102,7 +104,6 @@ void entryTSH(SM * sm);
 void entryTSMIN(SM * sm);
 void entryASH(SM * sm);
 void entryASM(SM * sm);
-void entryCH(SM * sm);
 
 
 void exitTSH(SM * sm);

@@ -6,8 +6,6 @@
  */
 
 #include "SWatch.h"
-#include <stdint.h>
-#include <stdbool.h>
 
 #define MAX_STATE 9
 
@@ -211,14 +209,14 @@ void entrySRES(SM * sm)
 	sm->sWatchTimer.hours = sm->sWatchTimer.minutes = sm->sWatchTimer.seconds = sm->sWatchTimer.tenths = 0;
 	sm->outTimer = &(sm->sWatchTimer);
 }
-void entrySRUN(SM * sm){sm->Srunning = 1; sm->outTimer = &(sm->sWatchTimer);}
-void entrySP(SM * sm){sm->Srunning = 0;}
-void entrySF(SM * sm){doNothing(sm);}
-void entryTSH(SM * sm){sm->outTimer->hours = sm->clockTimer.hours; sm->submode = 1;}
+void entrySRUN(SM * sm)	{sm->Srunning = 1; sm->outTimer = &(sm->sWatchTimer);}
+void entrySP(SM * sm)	{sm->Srunning = 0;}
+void entrySF(SM * sm)	{doNothing(sm);}
+void entryTSH(SM * sm)	{sm->outTimer->hours = sm->clockTimer.hours; sm->submode = 1;}
 void entryTSMIN(SM * sm){sm->outTimer->minutes = sm->clockTimer.minutes; sm->submode = 2;}
-void entryASH(SM * sm) {sm->outTimer->hours = sm->alarmTimer.hours; sm->submode = 1;}
-void entryASM(SM * sm){sm->outTimer->minutes = sm->alarmTimer.minutes; sm->submode = 2;}
-void entryCH(SM * sm){doNothing(sm);}
+void entryASH(SM * sm) 	{sm->outTimer->hours = sm->alarmTimer.hours; sm->submode = 1;}
+void entryASM(SM * sm)	{sm->outTimer->minutes = sm->alarmTimer.minutes; sm->submode = 2;}
+void entryCH(SM * sm)	{doNothing(sm);}
 
 //------------------------------------------------------------
 //EXIT FUNCTIONS
