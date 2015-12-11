@@ -45,6 +45,7 @@
 #include "stm32f4_discovery.h"
 #include "stm32f4_discovery_lcd.h"
 #include "stm32f4xx.h"
+#include <stdbool.h>
 
 #include "STMPE811QTR.h"
 #include "pictures.h"
@@ -57,16 +58,7 @@
 #include "fonts.h"
 #include "debug.h"
 
-/* State variables for generated code */
-RT_MODEL_SWatch_T SWatch_state;
-char_T errorSig[6];
-PrevZCX_SWatch_T ZCSig;
-DW_SWatch_T DWork;
-
-
-boolean_T Btime, Btimeset, Balarm, Bswatch, Bplus, Bminus, Balarmset, isAlarmset;
-uint8_T hours=0, minutes=0, seconds=0, tenths=0, mode=0, buzzer=0, submode = 0 ;
-
+SM * SWatch;
 /*
  * SysTick ISR2
  */
@@ -107,71 +99,46 @@ TASK(TaskLCD)
 	*/
 }
 
-void setTimeString(char *watchstr, uint8_T hours, uint8_T minutes, uint8_T seconds, uint8_T tenths, uint8_T mode)
+void setTimeString(char *watchstr, EE_UINT8 hours, EE_UINT8 minutes, EE_UINT8 seconds, EE_UINT8 tenths, EE_UINT8 mode)
 {
 	sprintf(watchstr, "%2d:%2d:%2d", hours, minutes, seconds);
 }
 /*
  * TASK Clock
  */
-unsigned char IsUpdateTime()
-{
-	unsigned char res;
-	static unsigned char oh=0, om=0, os=0;
-	if (hours!=oh || minutes!=om || seconds!= os)
-		res = 1;
-	else
-		res = 0;
-	oh = hours;
-	om = minutes;
-	os = seconds;
-	return res;
-}
-
-void UpdateTime()
-{
-	unsigned char watchstr[20];
-	setTimeString(watchstr, hours, minutes, seconds, tenths, mode);
-
-	LCD_SetTextColor(Blue);
-	LCD_SetBackColor(Blue);
-	//LCD_DrawFullRect(25, 100, 106, 32);
-
-/*	WPrint(&MyWatchScr[TIMESTR], watchstr); */
-}
 
 void UpdateMode(unsigned char om, unsigned char m)
 {
 	switch(om) {
 	case 2:
-		DrawOff(&MyWatchScr[BALARM]);
+		DrawOff(&MyWatchScr[BALAR]);
 		break;
 	case 1:
-		DrawOff(&MyWatchScr[BTIMESET]);
+		DrawOff(&MyWatchScr[BTIMESE]);
 		break;
 	case 0:
-		DrawOff(&MyWatchScr[BTIME]);
+		DrawOff(&MyWatchScr[BTIM]);
 		break;
 	case 3:
 		DrawOff(&MyWatchScr[BSWATCH]);
 		DrawOff(&MyWatchScr[BPLU]);
-		DrawOff(&MyWatchScr[BMINUS]);
+		DrawOff(&MyWatchScr[BMINU]);
 		break;
 	}
 	switch(m) {
 	case 2:
-		DrawOn(&MyWatchScr[BALARM]);
+		DrawOn(&MyWatchScr[BALAR]);
 		break;
 	case 1:
-		DrawOn(&MyWatchScr[BTIMESET]);
+		DrawOn(&MyWatchScr[BTIMESE]);
 		break;
 	case 0:
-		DrawOn(&MyWatchScr[BTIME]);
+		DrawOn(&MyWatchScr[BTIM]);
 		break;
 	case 3:
 		DrawOn(&MyWatchScr[BSWATCH]);
 		DrawOn(&MyWatchScr[BPLU]);
-		DrawOn(&MyWatchScr[BMINUS]);
+		DrawOn(&MyWatchScr[BMINU]);
 		break;
 	}
 }
@@ -183,18 +150,18 @@ void strencode2digit(char *str, int digit)
 	str[1]=digit%10+'0';
 }
 
-void updatealarmbutton()
+void updatealarmbutton(SM * sm)
 {
-	if(isAlarmset && buzzer == 0)
-		DrawOn(&MyWatchScr[BALARMSET]);
+	if(sm->isAlarmSet && sm->buzzer == 0)
+		DrawOn(&MyWatchScr[BALARMSE]);
 	else
-		DrawOff(&MyWatchScr[BALARMSET]);
+		DrawOff(&MyWatchScr[BALARMSE]);
 
 }
 
-void drawalarm()
+void drawalarm(SM * sm)
 {
-	if(buzzer == 1 && isAlarmset)
+	if(sm->buzzer == 1 && sm->isAlarmSet)
 		DrawOn(&MyWatchScr[WAKE]);
 }
 
@@ -213,51 +180,45 @@ TASK(TaskClock)
 	static unsigned char ob=0xFF, oas=0xFF;
 	char tstr[3];
 	char astr[2];
+	EE_UINT8 mode, submode, hours, minutes, seconds, tenths;
+	EE_UINT8 isAlarmset, buzzer;
+
+	mode = SWatch->mode;
+	submode = SWatch->submode;
+	hours = SWatch->outTimer->hours;
+	minutes = SWatch->outTimer->minutes;
+	seconds = SWatch->outTimer->seconds;
+	tenths = SWatch->outTimer->tenths;
+	isAlarmset = SWatch->isAlarmSet;
+	buzzer = SWatch->buzzer;
 
 	if (IsEvent(TIMEMODE))
-		Btime=1;//dispatch
-	else
-		Btime=0;
+		dispatch(SWatch, BTIME);
 
 	if (IsEvent(TIMESETMODE))
-		Btimeset=1;
-	else
-		Btimeset=0;
+		dispatch(SWatch, BTIMESET);
 
 	if (IsEvent(ALARMMODE))
-		Balarm=1;
-	else
-		Balarm=0;
+		dispatch(SWatch, BALARM);
 
 	if (IsEvent(SWATCHMODE))
-		Bswatch=1;
-	else
-		Bswatch=0;
+		dispatch(SWatch, BSTOPWATCH);
 
 	if (IsEvent(PLUS))
-		Bplus=1;
-	else
-		Bplus=0;
+		dispatch(SWatch, BPLUS);
 
 	if (IsEvent(MINUS))
-		Bminus=1;
-	else
-		Bminus=0;
+		dispatch(SWatch, BMINUS);
 
 	if (IsEvent(ALARMSET))
-		Balarmset=1;
-	else
-		Balarmset=0;
+		dispatch(SWatch, BALARMSET);
 
 
 //	debuginfo(6, button[0], button[2], button[3]);
 
-	SWatch_step(&SWatch_state,
-			  Bplus, Bminus, Btime, Btimeset, Balarm, Bswatch, Balarmset,
-			  &hours, &minutes, &seconds, &tenths, &mode, &buzzer, &isAlarmset, &submode);
+	SWatch_step(SWatch);
 
 	ClearEvents();
-	Bplus=Bminus=Btime=Btimeset=Balarm=Bswatch=Balarmset=0;
 
 	if (hours!=oh || mode!= oldmode || submode != oldsubmode) {
 		strencode2digit(tstr, (int)hours);
@@ -265,13 +226,13 @@ TASK(TaskClock)
 		LCD_SetBackColor(Black);
 		LCD_DrawFullRect(40, 75, 62, 48);
 		if(submode == 1 && (mode == 1 || mode == 2))
-			WPrint(&MyWatchScr[HRSSTR], tstr, true);
+			WPrint(&MyWatchScr[HRSSTR], tstr, 1);
 		else
-			WPrint(&MyWatchScr[HRSSTR], tstr, false);
+			WPrint(&MyWatchScr[HRSSTR], tstr, 0);
 		if(mode!=1 && mode!=2)
 		{
-			WPrint(&MyWatchScr[SEP1STR], ":", false);
-			WPrint(&MyWatchScr[SEP2STR], ":", false);
+			WPrint(&MyWatchScr[SEP1STR], ":", 0);
+			WPrint(&MyWatchScr[SEP2STR], ":", 0);
 		}
 		oh=hours;
 
@@ -282,13 +243,13 @@ TASK(TaskClock)
 		LCD_SetBackColor(Black);
 		LCD_DrawFullRect(110, 75, 62, 48);
 		if(submode == 2 && (mode == 1 || mode == 2))
-			WPrint(&MyWatchScr[MINSTR], tstr, true);
+			WPrint(&MyWatchScr[MINSTR], tstr, 1);
 		else
-			WPrint(&MyWatchScr[MINSTR], tstr, false);
+			WPrint(&MyWatchScr[MINSTR], tstr, 0);
 		if(mode!=1 && mode!=2)
 		{
-			WPrint(&MyWatchScr[SEP1STR], ":", false);
-			WPrint(&MyWatchScr[SEP2STR], ":", false);
+			WPrint(&MyWatchScr[SEP1STR], ":", 0);
+			WPrint(&MyWatchScr[SEP2STR], ":", 0);
 		}
 		om=minutes;
 	}
@@ -297,10 +258,10 @@ TASK(TaskClock)
 		LCD_SetTextColor(Black);
 		LCD_SetBackColor(Black);
 		LCD_DrawFullRect(180, 75, 62, 48);
-		WPrint(&MyWatchScr[SECSTR], tstr, false);
+		WPrint(&MyWatchScr[SECSTR], tstr, 0);
 		if(mode!=1 && mode!=2){
-			WPrint(&MyWatchScr[SEP1STR], ":", false);
-			WPrint(&MyWatchScr[SEP2STR], ":", false);
+			WPrint(&MyWatchScr[SEP1STR], ":", 0);
+			WPrint(&MyWatchScr[SEP2STR], ":", 0);
 		}
 		os=seconds;
 	}
@@ -310,11 +271,11 @@ TASK(TaskClock)
 		LCD_SetTextColor(Black);
 		LCD_SetBackColor(Black);
 		LCD_DrawFullRect(250, 75, 31, 48);
-		WPrint(&MyWatchScr[TTSSTR], astr, false);
-		WPrint(&MyWatchScr[SEP3STR], ".", false);
+		WPrint(&MyWatchScr[TTSSTR], astr, 0);
+		WPrint(&MyWatchScr[SEP3STR], ".", 0);
 		if(mode!=1 && mode!=2){
-			WPrint(&MyWatchScr[SEP1STR], ":", false);
-			WPrint(&MyWatchScr[SEP2STR], ":", false);
+			WPrint(&MyWatchScr[SEP1STR], ":", 0);
+			WPrint(&MyWatchScr[SEP2STR], ":", 0);
 		}
 		ot=tenths;
 	}
@@ -338,12 +299,12 @@ TASK(TaskClock)
 	}
 
 	if (oas != isAlarmset) {
-		updatealarmbutton();
+		updatealarmbutton(SWatch);
 		oas = isAlarmset;
 	}
 
 	if (ob != buzzer) {
-		drawalarm();
+		drawalarm(SWatch);
 		ob = buzzer;
 	}
 
@@ -369,13 +330,9 @@ int main(void)
   /*Initializes Erika related stuffs*/
 	EE_system_init();
 
-	SM * sm;
-	SWatchInit(sm);
-
   /* init state machine */
-	SWatch_initialize(&SWatch_state,
-			  &Bplus, &Bminus, &Btime, &Btimeset, &Balarm, &Bswatch, &Balarmset,
-			  &hours, &minutes, &seconds, &tenths, &mode, &buzzer, &isAlarmset, &submode);
+	SWatchInit(SWatch);
+
 
 	/*Initialize systick */
 	EE_systick_set_period(MILLISECONDS_TO_TICKS(1, SystemCoreClock));

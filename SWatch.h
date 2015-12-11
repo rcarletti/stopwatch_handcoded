@@ -8,20 +8,13 @@
 #ifndef SWATCH_H_
 #define SWATCH_H_
 
+#include "ee.h"
+//------------------------------------------------------
+// SIGNALS AND STATES
+//------------------------------------------------------
+typedef struct SM SM;
 
 typedef void (*Action)(SM *sm);
-
-typedef struct state
-{
-	State s;
-	Action entry;
-	Action exit;
-}state;
-
-typedef enum Signal
-{
-	BSTOP, BTIMESET, BALARM, BTIME, BPLUS, BMINUS, BALARMSET, MAX_SIGNAL
-}Signal;
 
 typedef enum State
 {
@@ -30,42 +23,60 @@ typedef enum State
 	ASET_HOURS, ASET_MINUTES
 }State;
 
+typedef struct state
+{
+	State s;
+	Action entry;
+	Action exit;
+}state;
+
+
+typedef enum Signal
+{
+	BSTOPWATCH, BTIMESET, BALARM, BTIME, BPLUS, BMINUS, BALARMSET, MAX_SIGNAL
+}Signal;
+
+//---------------------------------------------------------
+//
+//---------------------------------------------------------
+
 typedef struct Timer
 {
-	uint8 hours;
-	uint8 minutes;
-	uint8 seconds;
-	uint8 tenths;
+	EE_UINT8 hours;
+	EE_UINT8 minutes;
+	EE_UINT8 seconds;
+	EE_UINT8 tenths;
 }Timer;
 
-typedef struct Tran
-{
-	action Action;
-	state nextState;
-}tran;
+typedef struct Tran Tran;
 
-typedef struct SM
+
+struct SM
 {
-	state const *stateArray;
-	Tran const *tranTable;
+	state *stateArray;
+	Tran  *tranTable;
 	state currState;
-	uint8 numSignals;
-	uint8 numStates;
-	uint8 mode;
-	uint8 submode;
+	EE_UINT8 numSignals;
+	EE_UINT8 numStates;
+	EE_UINT8 mode;
+	EE_UINT8 submode;
 
 	//status variables
-	boolean Trunning, Srunning;
+	EE_UINT8 Trunning, Srunning;
 	//timers
 	Timer clockTimer, alarmTimer, sWatchTimer;
 	//output timer
 	Timer * outTimer;
 	//alarm varaibles
-	boolean isAlarmSet, buzzer;
-}SM;
+	EE_UINT8 isAlarmSet, buzzer;
+};
 
 
-
+struct Tran
+{
+	Action action;
+	state nextState;
+};
 
 
 //-------------------------------------------------------
@@ -75,12 +86,14 @@ typedef struct SM
 void TimerInit(Timer *t);
 
 void SWatchInit(SM * sm);
-void SWatchStep(SM* sm);
+void SWatch_step(SM* sm);
 
 void doNothing(SM * sm);
 void SWatchTimeMode(SM * sm);
+void dispatch(SM * sm, EE_UINT8 const sig);
+EE_UINT8 timerCompare(Timer * t1, Timer * t2);
 
-
+void entryTM(SM * sm);
 void entrySRES(SM * sm);
 void entrySRUN(SM * sm);
 void entrySP(SM * sm);
@@ -91,15 +104,10 @@ void entryASH(SM * sm);
 void entryASM(SM * sm);
 void entryCH(SM * sm);
 
-void exitSRES(SM * sm);
-void exitSRUN(SM * sm);
-void exitSP(SM * sm);
-void exitSF(SM * sm);
+
 void exitTSH(SM * sm);
-void exitTSMIM(SM * sm);
-void exitASH(SM * sm);
-void exitASM(SM * sm);
-void exitCH(SM * sm);
+void exitTSMIN(SM * sm);
+
 
 void toSwatchMode(SM * sm);
 void toTimeSetMode(SM * sm);
@@ -107,6 +115,14 @@ void toAlarmMode(SM * sm);
 void toTimeMode(SM * sm);
 void freeze(SM * sm);
 void TincMinutes(SM * sm);
+void TdecMinutes(SM * sm);
+void TincHours(SM * sm);
+void TdecHours(SM * sm);
+void AincMinutes(SM * sm);
+void AdecMinutes(SM * sm);
+void AincHours(SM * sm);
+void AdecHours(SM * sm);
+void setAlarm(SM * sm);
 
 
 

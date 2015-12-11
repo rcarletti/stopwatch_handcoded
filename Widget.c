@@ -9,6 +9,7 @@
 #include "WidgetConfig.h"
 #include "Event.h"
 #include "debug.h"
+#include "ee.h"
 
 
 unsigned char contains(const Widget *w, TPoint *point){
@@ -86,7 +87,7 @@ unsigned char DrawOff(const Widget *w)
 		return 0;
 }
 
-unsigned char WPrint(const Widget *w, char *s, bool selected)
+unsigned char WPrint(const Widget *w, char *s, EE_UINT8 selected)
 {
 	if (w->wt == TEXT) {
 		if (selected)

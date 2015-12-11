@@ -10,7 +10,7 @@
 #include "Event.h"
 #include "Touch.h"
 #include "fonts.h"
-#include <stdbool.h>
+#include "ee.h"
 
 
 typedef enum  {
@@ -51,6 +51,6 @@ unsigned char OnTouch(const Widget ws[], TPoint *press);
 unsigned char DrawInit(const Widget ws[]);
 unsigned char DrawOn(const Widget *w);
 unsigned char DrawOff(const Widget *w);
-unsigned char WPrint(const Widget *w, char *s, bool selected);
+unsigned char WPrint(const Widget *w, char *s, EE_UINT8 selected);
 
 #endif /* BUTTON_H_ */

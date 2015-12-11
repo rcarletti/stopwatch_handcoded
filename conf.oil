@@ -54,6 +54,7 @@ CPU mySystem {
 			APP_SRC = "Touch.c";
 			APP_SRC = "pictures.c";
 			APP_SRC = "Event.c";
+			APP_SRC = "SWatch.c";
 			APP_SRC = "Widget.c";
 			APP_SRC = "WidgetConfig.c";
 			APP_SRC = "STMPE811QTR.c";

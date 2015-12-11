@@ -11,13 +11,13 @@
 #define NUMWIDGETS 16
 
 #define BAKCG 0
-#define BTIME 1
-#define BTIMESET 2
-#define BALARM 3
+#define BTIM 1
+#define BTIMESE 2
+#define BALAR 3
 #define BSWATCH 4
 #define BPLU 5
-#define BMINUS 6
-#define BALARMSET 7
+#define BMINU 6
+#define BALARMSE 7
 #define WAKE 8
 #define HRSSTR 9
 #define MINSTR 10
