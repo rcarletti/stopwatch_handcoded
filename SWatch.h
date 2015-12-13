@@ -10,54 +10,53 @@
 
 #include "ee.h"
 
-typedef struct SM SM;
-
-typedef void (*Action)(SM *sm);
 //------------------------------------------------------
 // SIGNALS AND STATES
 //------------------------------------------------------
 
+struct SM;
 
-typedef enum State
+typedef void (*Action)(struct SM *sm);
+
+enum StateID
 {
 	TIME_MODE, SRESET, SRUNNING, SPAUSE, SFREEZE,
 	TSET_HOURS, TSET_MINUTES,
 	ASET_HOURS, ASET_MINUTES
-}State;
+};
 
-typedef struct state
+struct State
 {
-	State s;
+	enum StateID s;
 	Action entry;
 	Action exit;
-}state;
+};
 
-
-typedef enum Signal
+enum SignalID
 {
 	BSTOPWATCH, BTIMESET, BALARM, BTIME, BPLUS, BMINUS, BALARMSET, MAX_SIGNAL
-}Signal;
+};
 
 //---------------------------------------------------------
 // STATE MACHINE STRUCTURES
 //---------------------------------------------------------
 
-typedef struct Timer
+struct Timer
 {
 	EE_UINT8 hours;
 	EE_UINT8 minutes;
 	EE_UINT8 seconds;
 	EE_UINT8 tenths;
-}Timer;
+};
 
-typedef struct Tran Tran;
 
+struct Tran;
 
 struct SM
 {
-	state *stateArray;
-	Tran  *tranTable;
-	state currState;
+	struct State const *stateArray;
+	struct Tran  const *tranTable;
+	enum StateID currState;
 	EE_UINT8 numSignals;
 	EE_UINT8 numStates;
 	EE_UINT8 mode;
@@ -66,9 +65,9 @@ struct SM
 	//status variables
 	EE_UINT8 Trunning, Srunning;
 	//timers
-	Timer clockTimer, alarmTimer, sWatchTimer;
+	struct Timer clockTimer, alarmTimer, sWatchTimer;
 	//output timer
-	Timer * outTimer;
+	struct Timer * outTimer;
 	//alarm varaibles
 	EE_UINT8 isAlarmSet, buzzer;
 };
@@ -77,7 +76,7 @@ struct SM
 struct Tran
 {
 	Action action;
-	state nextState;
+	enum StateID nextState;
 };
 
 
@@ -85,45 +84,46 @@ struct Tran
 //FUNCTIONS
 //-------------------------------------------------------
 
-void TimerInit(Timer *t);
+void TimerInit(struct Timer *t);
 
-void SWatchInit(SM * sm);
-void SWatch_step(SM* sm);
+void SWatchInit(struct SM * sm);
+void SWatch_step(struct SM* sm);
+void tick(struct Timer * t);
 
-void doNothing(SM * sm);
-void SWatchTimeMode(SM * sm);
-void dispatch(SM * sm, EE_UINT8 const sig);
-EE_UINT8 timerCompare(Timer * t1, Timer * t2);
+void doNothing(struct SM * sm);
+void SWatchTimeMode(struct SM * sm);
+void dispatch(struct SM * sm, EE_UINT8 const sig);
+EE_UINT8 timerCompare(struct Timer * t1, struct Timer * t2);
 
-void entryTM(SM * sm);
-void entrySRES(SM * sm);
-void entrySRUN(SM * sm);
-void entrySP(SM * sm);
-void entrySF(SM * sm);
-void entryTSH(SM * sm);
-void entryTSMIN(SM * sm);
-void entryASH(SM * sm);
-void entryASM(SM * sm);
-
-
-void exitTSH(SM * sm);
-void exitTSMIN(SM * sm);
+void entryTM(struct SM * sm);
+void entrySRES(struct SM * sm);
+void entrySRUN(struct SM * sm);
+void entrySP(struct SM * sm);
+void entrySF(struct SM * sm);
+void entryTSH(struct SM * sm);
+void entryTSMIN(struct SM * sm);
+void entryASH(struct SM * sm);
+void entryASM(struct SM * sm);
 
 
-void toSwatchMode(SM * sm);
-void toTimeSetMode(SM * sm);
-void toAlarmMode(SM * sm);
-void toTimeMode(SM * sm);
-void freeze(SM * sm);
-void TincMinutes(SM * sm);
-void TdecMinutes(SM * sm);
-void TincHours(SM * sm);
-void TdecHours(SM * sm);
-void AincMinutes(SM * sm);
-void AdecMinutes(SM * sm);
-void AincHours(SM * sm);
-void AdecHours(SM * sm);
-void setAlarm(SM * sm);
+void exitTSH(struct SM * sm);
+void exitTSMIN(struct SM * sm);
+
+
+void toSwatchMode(struct SM * sm);
+void toTimeSetMode(struct SM * sm);
+void toAlarmMode(struct SM * sm);
+void toTimeMode(struct SM * sm);
+void freeze(struct SM * sm);
+void TincMinutes(struct SM * sm);
+void TdecMinutes(struct SM * sm);
+void TincHours(struct SM * sm);
+void TdecHours(struct SM * sm);
+void AincMinutes(struct SM * sm);
+void AdecMinutes(struct SM * sm);
+void AincHours(struct SM * sm);
+void AdecHours(struct SM * sm);
+void setAlarm(struct SM * sm);
 
 
 

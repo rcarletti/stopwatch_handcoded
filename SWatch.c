@@ -9,7 +9,7 @@
 
 #define MAX_STATE 9
 
-state const Sarray[MAX_STATE] =
+struct State const Sarray[MAX_STATE] =
 {
 	{TIME_MODE, &entryTM, &doNothing},
 	{SRESET, &entrySRES, &doNothing},
@@ -21,12 +21,14 @@ state const Sarray[MAX_STATE] =
 	{ASET_HOURS, &entryASH, &doNothing},
 	{ASET_MINUTES, &entryASM, &doNothing},
 };
-Tran const Ttable[MAX_STATE][MAX_SIGNAL] =
+
+struct Tran const Ttable[MAX_STATE][MAX_SIGNAL] =
 {
 		{//TIME MODE
 			{&toSwatchMode,		SRESET},
 			{&toTimeSetMode, 	TSET_HOURS},
 			{&toAlarmMode,		ASET_HOURS},
+			{&toTimeMode,       TIME_MODE},
 			{&doNothing, 		TIME_MODE},
 			{&doNothing,		TIME_MODE},
 			{&setAlarm, 		TIME_MODE}
@@ -85,7 +87,6 @@ Tran const Ttable[MAX_STATE][MAX_SIGNAL] =
 			{&TincMinutes,		TSET_MINUTES},
 			{&TdecMinutes,		TSET_MINUTES},
 			{&setAlarm, 		TSET_MINUTES}
-
 		},
 		{//ALARM SET HOURS
 			{&toSwatchMode,		SRESET},
@@ -113,14 +114,14 @@ Tran const Ttable[MAX_STATE][MAX_SIGNAL] =
 //FUNCTION DEFINITIONS
 //----------------------------------------------------
 
-void TimerInit(Timer * t)
+void TimerInit(struct Timer * t)
 {
 	t->hours = t->minutes = t->seconds = t->tenths = 0;
 }
 
-void SWatchInit(SM * sm)
+void SWatchInit(struct SM * sm)
 {
-	sm->currState = Sarray[TIME_MODE];
+	sm->currState = TIME_MODE;
 	sm->tranTable = &Ttable[0][0];
 	sm->stateArray = &Sarray[0];
 	sm->numStates = MAX_STATE;
@@ -130,70 +131,73 @@ void SWatchInit(SM * sm)
 	TimerInit(&(sm->clockTimer));
 	TimerInit(&(sm->sWatchTimer));
 
-	toTimeMode(sm);
+	sm->outTimer = &sm->clockTimer;
 
 	sm->Srunning = 0;
 	sm->Trunning = 1;
 	sm->isAlarmSet = 0;
 	sm->buzzer = 0;
 	sm->mode = 0;
+	sm->submode = 0;
+
+	dispatch(sm, BTIME);
 }
 
-void dispatch(SM * sm, EE_UINT8 const sig)
+void dispatch(struct SM * sm, EE_UINT8 const sig)
 {
-	Tran const * t = sm->tranTable + sm->numSignals * sm->currState.s + sig;
-	sm->stateArray[sm->currState.s].exit;
+	struct Tran const * t = sm->tranTable + sm->numSignals * sm->currState + sig;
+	sm->stateArray[sm->currState].exit(sm);
 	t->action(sm);
 	sm->currState = t->nextState;
-	sm->stateArray[sm->currState.s].entry;
+	sm->stateArray[sm->currState].entry(sm);
 }
 
-void SWatch_step(SM * sm)
+void SWatch_step(struct SM * sm)
 {
-	if(sm->Trunning) {tick(sm->clockTimer);}
-	if(sm->Srunning) {tick(sm->sWatchTimer);}
+	if(sm->Trunning) {tick(&sm->clockTimer);}
+	if(sm->Srunning) {tick(&sm->sWatchTimer);}
 	if((timerCompare(&sm->alarmTimer, &sm->clockTimer) == 1) && sm->isAlarmSet)
 	{
 		sm->buzzer = 1;
 	}
 }
 
-void doNothing(SM * sm){}
+void doNothing(struct SM * sm){}
 
 
 //----------------------------------------------------------
 //TRANSITION FUNCTIONS
 //----------------------------------------------------------
 
-void toSwatchMode(SM * sm)	{sm->mode = 3; sm->outTimer = &(sm->sWatchTimer); }
-void toTimeSetMode(SM * sm) {sm->mode = 1; sm->Trunning = 0; sm->submode = 1;}
-void toAlarmMode(SM * sm)	{sm->mode = 2; sm->outTimer = &(sm->alarmTimer); sm->submode = 1;}
-void setAlarm(SM * sm)		{sm->isAlarmSet = !sm->isAlarmSet; if(sm->buzzer) sm->buzzer = 0;}
-void freeze(SM * sm)		{/*??*/}
-void toTimeMode(SM * sm)	{sm->mode = 0; sm->outTimer = &(sm->clockTimer);}
-void TincMinutes(SM * sm)	{sm->clockTimer.minutes = (sm->clockTimer.minutes + 1) % 60;}
-void TdecMinutes(SM * sm)
+void toSwatchMode(struct SM * sm)	{sm->mode = 3; sm->outTimer = &(sm->sWatchTimer); }
+void toTimeSetMode(struct SM * sm) 	{sm->mode = 1; sm->Trunning = 0; sm->submode = 1;}
+void toAlarmMode(struct SM * sm)	{sm->mode = 2; sm->outTimer = &(sm->alarmTimer); sm->submode = 1;}
+void setAlarm(struct SM * sm)		{sm->isAlarmSet = !sm->isAlarmSet; if(sm->buzzer) sm->buzzer = 0;}
+void freeze(struct SM * sm)			{/*??*/}
+void toTimeMode(struct SM * sm)		{sm->mode = 0; sm->outTimer = &(sm->clockTimer);}
+void TincMinutes(struct SM * sm)	{sm->clockTimer.minutes = (sm->clockTimer.minutes + 1) % 60;}
+void TdecMinutes(struct SM * sm)
 {
 	sm->clockTimer.minutes = sm->clockTimer.minutes - 1;
-	if(sm->clockTimer.minutes < 0){sm->clockTimer.minutes = 59;}
+	if(sm->clockTimer.minutes < 0)	{sm->clockTimer.minutes = 59;}
 }
-void TincHours(SM * sm)		{sm->clockTimer.hours = (sm->clockTimer.hours + 1) % 24;}
-void TdecHours(SM * sm)
+void TincHours(struct SM * sm)		{sm->clockTimer.hours = (sm->clockTimer.hours + 1) % 24;}
+void TdecHours(struct SM * sm)
 {
 	sm->clockTimer.hours -= 1;
-	if(sm->clockTimer.hours < 0) {sm->clockTimer.hours = 24;}
+	if(sm->clockTimer.hours < 0) 	{sm->clockTimer.hours = 24;}
 }
-void AincMinutes(SM * sm)	{sm->alarmTimer.minutes = (sm->alarmTimer.minutes + 1) % 60;}
-void AdecMinutes(SM * sm)
+void AincMinutes(struct SM * sm)	{sm->alarmTimer.minutes = (sm->alarmTimer.minutes + 1) % 60;}
+void AdecMinutes(struct SM * sm)
 {
 	sm->alarmTimer.minutes = sm->alarmTimer.minutes - 1;
-	if(sm->alarmTimer.minutes < 0){sm->alarmTimer.minutes = 59;}
+	if(sm->alarmTimer.minutes < 0)	{sm->alarmTimer.minutes = 59;}
 }
-void AincHours(SM * sm)		{sm->alarmTimer.hours = (sm->alarmTimer.hours + 1) % 24;}
-void AdecHours(SM * sm)
+void AincHours(struct SM * sm)		{sm->alarmTimer.hours = (sm->alarmTimer.hours + 1) % 24;}
+void AdecHours(struct SM * sm)
 {
 	sm->alarmTimer.hours -= 1;
-	if(sm->alarmTimer.hours < 0) {sm->alarmTimer.hours = 24;}
+	if(sm->alarmTimer.hours < 0) 	{sm->alarmTimer.hours = 24;}
 }
 
 
@@ -202,43 +206,43 @@ void AdecHours(SM * sm)
 //----------------------------------------------------------
 //ENTRY FUNCTIONS
 //----------------------------------------------------------
-void entryTM(SM * sm){sm->mode = 0; sm->outTimer = &(sm->clockTimer);}
-void entrySRES(SM * sm)
+void entryTM(struct SM * sm)	{sm->mode = 0; sm->outTimer = &(sm->clockTimer);}
+void entrySRES(struct SM * sm)
 {
 	sm->Srunning = 0;
 	sm->sWatchTimer.hours = sm->sWatchTimer.minutes = sm->sWatchTimer.seconds = sm->sWatchTimer.tenths = 0;
 	sm->outTimer = &(sm->sWatchTimer);
 }
-void entrySRUN(SM * sm)	{sm->Srunning = 1; sm->outTimer = &(sm->sWatchTimer);}
-void entrySP(SM * sm)	{sm->Srunning = 0;}
-void entrySF(SM * sm)	{doNothing(sm);}
-void entryTSH(SM * sm)	{sm->outTimer->hours = sm->clockTimer.hours; sm->submode = 1;}
-void entryTSMIN(SM * sm){sm->outTimer->minutes = sm->clockTimer.minutes; sm->submode = 2;}
-void entryASH(SM * sm) 	{sm->outTimer->hours = sm->alarmTimer.hours; sm->submode = 1;}
-void entryASM(SM * sm)	{sm->outTimer->minutes = sm->alarmTimer.minutes; sm->submode = 2;}
-void entryCH(SM * sm)	{doNothing(sm);}
+void entrySRUN(struct SM * sm)	{sm->Srunning = 1; sm->outTimer = &(sm->sWatchTimer);}
+void entrySP(struct SM * sm)	{sm->Srunning = 0;}
+void entrySF(struct SM * sm)	{doNothing(sm);}
+void entryTSH(struct SM * sm)	{sm->outTimer->hours = sm->clockTimer.hours; sm->submode = 1;}
+void entryTSMIN(struct SM * sm)	{sm->outTimer->minutes = sm->clockTimer.minutes; sm->submode = 2;}
+void entryASH(struct SM * sm) 	{sm->outTimer->hours = sm->alarmTimer.hours; sm->submode = 1;}
+void entryASM(struct SM * sm)	{sm->outTimer->minutes = sm->alarmTimer.minutes; sm->submode = 2;}
+void entryCH(struct SM * sm)	{doNothing(sm);}
 
 //------------------------------------------------------------
 //EXIT FUNCTIONS
 //------------------------------------------------------------
 
 
-void exitTSH(SM * sm){sm->Trunning = 1;}
-void exitTSMIN(SM * sm){sm->Trunning = 1;}
+void exitTSH(struct SM * sm){sm->Trunning = 1;}
+void exitTSMIN(struct SM * sm){sm->Trunning = 1;}
 
 
 
-void tick(Timer * t)
+void tick(struct Timer * t)
 {
 	t->tenths++;
 
-	if(t->tenths == 10){t->tenths = 0; t->seconds++;}
+	if(t->tenths == 10)	{t->tenths = 0; t->seconds++;}
 	if(t->seconds == 60){t->seconds = 0; t->minutes++;}
 	if(t->minutes == 60){t->minutes = 0; t->hours++;}
-	if(t->hours == 24){t->hours = 0;}
+	if(t->hours == 24)	{t->hours = 0;}
 }
 
-EE_UINT8 timerCompare(Timer * t1, Timer * t2)
+EE_UINT8 timerCompare(struct Timer * t1, struct Timer * t2)
 {
 	if(t1->hours != t2->hours || t1->minutes != t2->minutes)
 		return 0;

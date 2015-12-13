@@ -58,7 +58,7 @@
 #include "fonts.h"
 #include "debug.h"
 
-SM * SWatch;
+struct SM * SWatch;
 /*
  * SysTick ISR2
  */
@@ -150,7 +150,7 @@ void strencode2digit(char *str, int digit)
 	str[1]=digit%10+'0';
 }
 
-void updatealarmbutton(SM * sm)
+void updatealarmbutton(struct SM * sm)
 {
 	if(sm->isAlarmSet && sm->buzzer == 0)
 		DrawOn(&MyWatchScr[BALARMSE]);
@@ -159,7 +159,7 @@ void updatealarmbutton(SM * sm)
 
 }
 
-void drawalarm(SM * sm)
+void drawalarm(struct SM * sm)
 {
 	if(sm->buzzer == 1 && sm->isAlarmSet)
 		DrawOn(&MyWatchScr[WAKE]);
@@ -183,15 +183,6 @@ TASK(TaskClock)
 	EE_UINT8 mode, submode, hours, minutes, seconds, tenths;
 	EE_UINT8 isAlarmset, buzzer;
 
-	mode = SWatch->mode;
-	submode = SWatch->submode;
-	hours = SWatch->outTimer->hours;
-	minutes = SWatch->outTimer->minutes;
-	seconds = SWatch->outTimer->seconds;
-	tenths = SWatch->outTimer->tenths;
-	isAlarmset = SWatch->isAlarmSet;
-	buzzer = SWatch->buzzer;
-
 	if (IsEvent(TIMEMODE))
 		dispatch(SWatch, BTIME);
 
@@ -213,10 +204,22 @@ TASK(TaskClock)
 	if (IsEvent(ALARMSET))
 		dispatch(SWatch, BALARMSET);
 
-
 //	debuginfo(6, button[0], button[2], button[3]);
 
 	SWatch_step(SWatch);
+
+	mode = SWatch->mode;
+	submode = SWatch->submode;
+
+	if (SWatch->outTimer) {
+		hours = SWatch->outTimer->hours;
+		minutes = SWatch->outTimer->minutes;
+		seconds = SWatch->outTimer->seconds;
+		tenths = SWatch->outTimer->tenths;
+	}
+
+	isAlarmset = SWatch->isAlarmSet;
+	buzzer = SWatch->buzzer;
 
 	ClearEvents();
 
@@ -307,8 +310,6 @@ TASK(TaskClock)
 		drawalarm(SWatch);
 		ob = buzzer;
 	}
-
-
 }
 
 /**
@@ -349,7 +350,7 @@ int main(void)
 	/* Set the LCD Text size */
 //	LCD_SetFont(&Font8x12);
 //	Lcd_Touch_Calibration();
-	InitTouch(-0.102, 0.0656, -335, 10);
+//	InitTouch(-0.102, 0.0656, -335, 10);
 
 	/* Draw the background */
 	DrawInit(MyWatchScr);
