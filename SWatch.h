@@ -57,7 +57,7 @@ struct SM
 	struct State const *stateArray;
 	struct Tran  const *tranTable;
 	enum StateID currState;
-	EE_UINT8 numSignals;
+	int numSignals;
 	EE_UINT8 numStates;
 	EE_UINT8 mode;
 	EE_UINT8 submode;
@@ -65,7 +65,7 @@ struct SM
 	//status variables
 	EE_UINT8 Trunning, Srunning;
 	//timers
-	struct Timer clockTimer, alarmTimer, sWatchTimer;
+	struct Timer clockTimer, alarmTimer, sWatchTimer, lapTimer;
 	//output timer
 	struct Timer * outTimer;
 	//alarm varaibles
@@ -108,6 +108,7 @@ void entryASM(struct SM * sm);
 
 void exitTSH(struct SM * sm);
 void exitTSMIN(struct SM * sm);
+void exitLap(struct SM * sm);
 
 
 void toSwatchMode(struct SM * sm);

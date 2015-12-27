@@ -58,7 +58,7 @@
 #include "fonts.h"
 #include "debug.h"
 
-struct SM * SWatch;
+struct SM SWatch;
 /*
  * SysTick ISR2
  */
@@ -184,42 +184,42 @@ TASK(TaskClock)
 	EE_UINT8 isAlarmset, buzzer;
 
 	if (IsEvent(TIMEMODE))
-		dispatch(SWatch, BTIME);
+		dispatch(&SWatch, BTIME);
 
 	if (IsEvent(TIMESETMODE))
-		dispatch(SWatch, BTIMESET);
+		dispatch(&SWatch, BTIMESET);
 
 	if (IsEvent(ALARMMODE))
-		dispatch(SWatch, BALARM);
+		dispatch(&SWatch, BALARM);
 
 	if (IsEvent(SWATCHMODE))
-		dispatch(SWatch, BSTOPWATCH);
+		dispatch(&SWatch, BSTOPWATCH);
 
 	if (IsEvent(PLUS))
-		dispatch(SWatch, BPLUS);
+		dispatch(&SWatch, BPLUS);
 
 	if (IsEvent(MINUS))
-		dispatch(SWatch, BMINUS);
+		dispatch(&SWatch, BMINUS);
 
 	if (IsEvent(ALARMSET))
-		dispatch(SWatch, BALARMSET);
+		dispatch(&SWatch, BALARMSET);
 
 //	debuginfo(6, button[0], button[2], button[3]);
 
-	SWatch_step(SWatch);
+	SWatch_step(&SWatch);
 
-	mode = SWatch->mode;
-	submode = SWatch->submode;
+	mode = SWatch.mode;
+	submode = SWatch.submode;
 
-	if (SWatch->outTimer) {
-		hours = SWatch->outTimer->hours;
-		minutes = SWatch->outTimer->minutes;
-		seconds = SWatch->outTimer->seconds;
-		tenths = SWatch->outTimer->tenths;
+	if (SWatch.outTimer) {
+		hours = SWatch.outTimer->hours;
+		minutes = SWatch.outTimer->minutes;
+		seconds = SWatch.outTimer->seconds;
+		tenths = SWatch.outTimer->tenths;
 	}
 
-	isAlarmset = SWatch->isAlarmSet;
-	buzzer = SWatch->buzzer;
+	isAlarmset = SWatch.isAlarmSet;
+	buzzer = SWatch.buzzer;
 
 	ClearEvents();
 
@@ -256,13 +256,13 @@ TASK(TaskClock)
 		}
 		om=minutes;
 	}
-	if (seconds!= os) {
+	if (seconds!= os || mode!= oldmode || submode != oldsubmode) {
 		strencode2digit(tstr, (int)seconds);
 		LCD_SetTextColor(Black);
 		LCD_SetBackColor(Black);
 		LCD_DrawFullRect(180, 75, 62, 48);
-		WPrint(&MyWatchScr[SECSTR], tstr, 0);
 		if(mode!=1 && mode!=2){
+			WPrint(&MyWatchScr[SECSTR], tstr, 0);
 			WPrint(&MyWatchScr[SEP1STR], ":", 0);
 			WPrint(&MyWatchScr[SEP2STR], ":", 0);
 		}
@@ -302,12 +302,12 @@ TASK(TaskClock)
 	}
 
 	if (oas != isAlarmset) {
-		updatealarmbutton(SWatch);
+		updatealarmbutton(&SWatch);
 		oas = isAlarmset;
 	}
 
 	if (ob != buzzer) {
-		drawalarm(SWatch);
+		drawalarm(&SWatch);
 		ob = buzzer;
 	}
 }
@@ -331,19 +331,23 @@ int main(void)
   /*Initializes Erika related stuffs*/
 	EE_system_init();
 
-  /* init state machine */
-	SWatchInit(SWatch);
 
+
+	/* init state machine */
+	SWatchInit(&SWatch);
 
 	/*Initialize systick */
 	EE_systick_set_period(MILLISECONDS_TO_TICKS(1, SystemCoreClock));
 	EE_systick_enable_int();
 	EE_systick_start();
 
+
 	/* Initializes LCD and touchscreen */
 	IOE_Config();
 	/* Initialize the LCD */
 	STM32f4_Discovery_LCD_Init();
+
+
 
 //	LCD_Clear(White);
 

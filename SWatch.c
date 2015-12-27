@@ -130,6 +130,7 @@ void SWatchInit(struct SM * sm)
 	TimerInit(&(sm->alarmTimer));
 	TimerInit(&(sm->clockTimer));
 	TimerInit(&(sm->sWatchTimer));
+	TimerInit(&(sm->lapTimer));
 
 	sm->outTimer = &sm->clockTimer;
 
@@ -162,6 +163,33 @@ void SWatch_step(struct SM * sm)
 	}
 }
 
+void tick(struct Timer * t)
+{
+	t->tenths++;
+
+	if(t->tenths == 10)	{t->tenths = 0; t->seconds++;}
+	if(t->seconds == 60){t->seconds = 0; t->minutes++;}
+	if(t->minutes == 60){t->minutes = 0; t->hours++;}
+	if(t->hours == 24)	{t->hours = 0;}
+}
+
+EE_UINT8 timerCompare(struct Timer * t1, struct Timer * t2)
+{
+	if(t1->hours != t2->hours || t1->minutes != t2->minutes)
+		return 0;
+	return 1;
+}
+
+void timerCopy(struct Timer * t1, struct Timer * t2)
+{
+	t1->seconds = t2->seconds;
+	t1->minutes = t2->minutes;
+	t1->seconds = t2->seconds;
+	t1->tenths = t2->tenths;
+}
+
+
+
 void doNothing(struct SM * sm){}
 
 
@@ -173,7 +201,7 @@ void toSwatchMode(struct SM * sm)	{sm->mode = 3; sm->outTimer = &(sm->sWatchTime
 void toTimeSetMode(struct SM * sm) 	{sm->mode = 1; sm->Trunning = 0; sm->submode = 1;}
 void toAlarmMode(struct SM * sm)	{sm->mode = 2; sm->outTimer = &(sm->alarmTimer); sm->submode = 1;}
 void setAlarm(struct SM * sm)		{sm->isAlarmSet = !sm->isAlarmSet; if(sm->buzzer) sm->buzzer = 0;}
-void freeze(struct SM * sm)			{/*??*/}
+void freeze(struct SM * sm)			{timerCopy(&sm->lapTimer, &sm->sWatchTimer);sm->outTimer = &(sm->lapTimer);}
 void toTimeMode(struct SM * sm)		{sm->mode = 0; sm->outTimer = &(sm->clockTimer);}
 void TincMinutes(struct SM * sm)	{sm->clockTimer.minutes = (sm->clockTimer.minutes + 1) % 60;}
 void TdecMinutes(struct SM * sm)
@@ -209,6 +237,7 @@ void AdecHours(struct SM * sm)
 void entryTM(struct SM * sm)	{sm->mode = 0; sm->outTimer = &(sm->clockTimer);}
 void entrySRES(struct SM * sm)
 {
+	sm->mode = 3;
 	sm->Srunning = 0;
 	sm->sWatchTimer.hours = sm->sWatchTimer.minutes = sm->sWatchTimer.seconds = sm->sWatchTimer.tenths = 0;
 	sm->outTimer = &(sm->sWatchTimer);
@@ -216,10 +245,10 @@ void entrySRES(struct SM * sm)
 void entrySRUN(struct SM * sm)	{sm->Srunning = 1; sm->outTimer = &(sm->sWatchTimer);}
 void entrySP(struct SM * sm)	{sm->Srunning = 0;}
 void entrySF(struct SM * sm)	{doNothing(sm);}
-void entryTSH(struct SM * sm)	{sm->outTimer->hours = sm->clockTimer.hours; sm->submode = 1;}
-void entryTSMIN(struct SM * sm)	{sm->outTimer->minutes = sm->clockTimer.minutes; sm->submode = 2;}
-void entryASH(struct SM * sm) 	{sm->outTimer->hours = sm->alarmTimer.hours; sm->submode = 1;}
-void entryASM(struct SM * sm)	{sm->outTimer->minutes = sm->alarmTimer.minutes; sm->submode = 2;}
+void entryTSH(struct SM * sm)	{timerCopy(sm->outTimer, &sm->clockTimer); sm->submode = 1; sm->mode = 1;}
+void entryTSMIN(struct SM * sm)	{timerCopy(sm->outTimer, &sm->clockTimer); sm->submode = 2; sm->mode = 1;}
+void entryASH(struct SM * sm) 	{timerCopy(sm->outTimer, &sm->alarmTimer); sm->submode = 1; sm->mode = 2;}
+void entryASM(struct SM * sm)	{timerCopy(sm->outTimer, &sm->alarmTimer); sm->submode = 2;sm->mode = 2;}
 void entryCH(struct SM * sm)	{doNothing(sm);}
 
 //------------------------------------------------------------
@@ -229,22 +258,8 @@ void entryCH(struct SM * sm)	{doNothing(sm);}
 
 void exitTSH(struct SM * sm){sm->Trunning = 1;}
 void exitTSMIN(struct SM * sm){sm->Trunning = 1;}
+void exitLap(struct SM * sm){sm->outTimer = &(sm->sWatchTimer);}
 
 
 
-void tick(struct Timer * t)
-{
-	t->tenths++;
 
-	if(t->tenths == 10)	{t->tenths = 0; t->seconds++;}
-	if(t->seconds == 60){t->seconds = 0; t->minutes++;}
-	if(t->minutes == 60){t->minutes = 0; t->hours++;}
-	if(t->hours == 24)	{t->hours = 0;}
-}
-
-EE_UINT8 timerCompare(struct Timer * t1, struct Timer * t2)
-{
-	if(t1->hours != t2->hours || t1->minutes != t2->minutes)
-		return 0;
-	return 1;
-}
